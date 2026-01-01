@@ -1,11 +1,13 @@
-#define DEBUG     1
+#define DEBUG         1
 
-#define TRIGGER   4
+#define BT_NAME  "OPENING_Cube"
 
-#define LIMIT_1   32
-#define LIMIT_2   33
-#define LIMIT_3   25
-#define LIMIT_4   26
+#define TRIGGER       4
+
+#define LIMIT_1       32
+#define LIMIT_2       33
+#define LIMIT_3       25
+#define LIMIT_4       26
 
 #define MOTOR_1_DIR   27
 #define MOTOR_1_PUL   14
@@ -20,6 +22,11 @@
 #define MOTOR_4_PUL   18
 
 #include <Arduino.h>
+#include <Preferences.h>
+#include <BluetoothSerial.h>
+
+BluetoothSerial SerialBT;
+Preferences preferences;
 
 bool homing = false;
 bool launchSuccess = false;
@@ -33,6 +40,24 @@ uint32_t stepper4_steps = 10000;
 bool lastTriggerState = HIGH;
 uint32_t lastMillis = 0;
 
+
+void saveConfig() {
+  preferences.begin("CUBE", false);
+  preferences.putUInt("step1", stepper1_steps); // Save input port
+  preferences.putUInt("step2", stepper2_steps); // Save output port
+  preferences.putUInt("step3", stepper3_steps); // Save output port
+  preferences.putUInt("step4", stepper4_steps); // Save output port
+  preferences.end();
+}
+
+void loadConfig() {
+  preferences.begin("CUBE", true);
+  preferences.getUInt("step1", stepper1_steps); // Load input port
+  preferences.getUInt("step2", stepper2_steps); // Load output port
+  preferences.getUInt("step3", stepper3_steps); // Load output port
+  preferences.getUInt("step4", stepper4_steps); // Load output port
+  preferences.end();
+}
 
 void launchSequence(){
   if (DEBUG){ Serial.println("Launch sequence initiated."); }
@@ -100,6 +125,8 @@ void homingSequence(){
     digitalWrite(MOTOR_1_PUL, LOW);
     delayMicroseconds(1000); // Time between pulses 
   } 
+  if (DEBUG){ Serial.println("Motor 1 homed."); }
+
   while(digitalRead(LIMIT_2) == HIGH){
     // Move motor 2 towards home
     digitalWrite(MOTOR_2_DIR, LOW); // Set direction towards home
@@ -108,6 +135,8 @@ void homingSequence(){
     digitalWrite(MOTOR_2_PUL, LOW);
     delayMicroseconds(1000); // Time between pulses 
   }
+  if (DEBUG){ Serial.println("Motor 2 homed."); }
+
   while(digitalRead(LIMIT_3) == HIGH){
     digitalWrite(MOTOR_3_DIR, LOW); // Set direction towards home
     digitalWrite(MOTOR_3_PUL, HIGH);
@@ -115,6 +144,8 @@ void homingSequence(){
     digitalWrite(MOTOR_3_PUL, LOW);
     delayMicroseconds(1000); // Time between pulses
   }
+  if (DEBUG){ Serial.println("Motor 3 homed."); }
+
   while(digitalRead(LIMIT_4) == HIGH){
     digitalWrite(MOTOR_4_DIR, LOW); // Set direction towards home
     digitalWrite(MOTOR_4_PUL, HIGH);
@@ -122,6 +153,7 @@ void homingSequence(){
     digitalWrite(MOTOR_4_PUL, LOW);
     delayMicroseconds(1000); // Time between pulses
   }
+  if (DEBUG){ Serial.println("Motor 4 homed."); }
 }
 
 void resetLaunch(){
@@ -156,6 +188,34 @@ void resetLaunch(){
     delayMicroseconds(1000); // Time between pulses
   }
   if (DEBUG){ Serial.println("Steppers reset to home."); }
+}
+
+void processData(String data){
+  if (data.startsWith("SET_STEPS_1")){
+    stepper1_steps = data.substring(10, data.length()).toInt() - 1; SerialBT.println("Stepper 1 steps set to " + String(stepper1_steps));
+    saveConfig();
+  }
+  else if (data.startsWith("SET_STEPS_2")){
+    stepper2_steps = data.substring(10, data.length()).toInt() - 1; SerialBT.println("Stepper 2 steps set to " + String(stepper2_steps));
+    saveConfig();
+  }
+  else if (data.startsWith("SET_STEPS_3")){
+    stepper3_steps = data.substring(10, data.length()).toInt() - 1; SerialBT.println("Stepper 3 steps set to " + String(stepper3_steps));
+    saveConfig();
+  }
+  else if (data.startsWith("SET_STEPS_4")){
+    stepper4_steps = data.substring(10, data.length()).toInt() - 1; SerialBT.println("Stepper 4 steps set to " + String(stepper4_steps));
+    saveConfig();
+  }
+
+}
+
+void readBTSerial(){
+  if (SerialBT.available()){
+    String incoming = SerialBT.readStringUntil('\n');
+    incoming.trim();
+    processData(incoming);
+  }
 }
 
 void readSerial(){
@@ -200,14 +260,23 @@ void initGPIO(){
 void setup(){
   Serial.begin(115200);
   Serial2.begin(115200);
+
+  // Load saved configuration
+  loadConfig();
+
+  SerialBT.begin(BT_NAME); // Bluetooth device name
+  if (DEBUG){ Serial.println("Bluetooth begin with ID: " + String(BT_NAME)); }  
   
   initGPIO();   // Initialize GPIO pins
   
   homingSequence(); // Perform homing sequence
+  delay(500);
+  if (DEBUG){ Serial.println("Homing sequence completed."); }
 }
 
 void loop(){
   readInputs();
   readSerial();
+  readBTSerial();
   // inputCheck();  // DEBUG: Check input states
 }
