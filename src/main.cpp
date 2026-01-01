@@ -50,6 +50,21 @@ void saveConfig() {
   preferences.end();
 }
 
+void getConfig() {
+  preferences.begin("CUBE", true);
+  stepper1_steps = preferences.getUInt("step1", 10000); // Load input port
+  stepper2_steps = preferences.getUInt("step2", 10000); // Load output port
+  stepper3_steps = preferences.getUInt("step3", 10000); // Load output port
+  stepper4_steps = preferences.getUInt("step4", 10000); // Load output port
+  preferences.end();
+
+  SerialBT.println("✅ Configuration Loaded:");
+  SerialBT.println("Stepper 1 Steps: " + String(stepper1_steps));
+  SerialBT.println("Stepper 2 Steps: " + String(stepper2_steps));
+  SerialBT.println("Stepper 3 Steps: " + String(stepper3_steps));
+  SerialBT.println("Stepper 4 Steps: " + String(stepper4_steps));
+}
+
 void loadConfig() {
   preferences.begin("CUBE", true);
   preferences.getUInt("step1", stepper1_steps); // Load input port
@@ -191,23 +206,26 @@ void resetLaunch(){
 }
 
 void processData(String data){
-  if (data.startsWith("SET_STEPS_1")){
-    stepper1_steps = data.substring(10, data.length()).toInt() - 1; SerialBT.println("Stepper 1 steps set to " + String(stepper1_steps));
+  if (data.startsWith("SET_STEP1")){
+    stepper1_steps = data.substring(10, data.length()).toInt(); SerialBT.println("✅ Stepper 1 steps set to " + String(stepper1_steps));
     saveConfig();
   }
-  else if (data.startsWith("SET_STEPS_2")){
-    stepper2_steps = data.substring(10, data.length()).toInt() - 1; SerialBT.println("Stepper 2 steps set to " + String(stepper2_steps));
+  else if (data.startsWith("SET_STEP2")){
+    stepper2_steps = data.substring(10, data.length()).toInt(); SerialBT.println("✅ Stepper 2 steps set to " + String(stepper2_steps));
     saveConfig();
   }
-  else if (data.startsWith("SET_STEPS_3")){
-    stepper3_steps = data.substring(10, data.length()).toInt() - 1; SerialBT.println("Stepper 3 steps set to " + String(stepper3_steps));
+  else if (data.startsWith("SET_STEP3")){
+    stepper3_steps = data.substring(10, data.length()).toInt(); SerialBT.println("✅ Stepper 3 steps set to " + String(stepper3_steps));
     saveConfig();
   }
-  else if (data.startsWith("SET_STEPS_4")){
-    stepper4_steps = data.substring(10, data.length()).toInt() - 1; SerialBT.println("Stepper 4 steps set to " + String(stepper4_steps));
+  else if (data.startsWith("SET_STEP4")){
+    stepper4_steps = data.substring(10, data.length()).toInt(); SerialBT.println("✅ Stepper 4 steps set to " + String(stepper4_steps));
     saveConfig();
+  } 
+  else if (data == "GET_CONFIG"){
+    getConfig();
   }
-
+  else { SerialBT.println("❌ Unknown command: " + data);}
 }
 
 void readBTSerial(){
@@ -269,7 +287,7 @@ void setup(){
   
   initGPIO();   // Initialize GPIO pins
   
-  homingSequence(); // Perform homing sequence
+  // homingSequence(); // Perform homing sequence
   delay(500);
   if (DEBUG){ Serial.println("Homing sequence completed."); }
 }
