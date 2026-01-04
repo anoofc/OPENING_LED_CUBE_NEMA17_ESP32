@@ -30,11 +30,18 @@ Preferences preferences;
 
 bool homing = false;
 bool launchSuccess = false;
+bool reset = true;
 
 uint32_t stepper1_steps = 10000;
 uint32_t stepper2_steps = 10000;
 uint32_t stepper3_steps = 10000;
 uint32_t stepper4_steps = 10000;
+
+uint32_t RAMP_STEPS     = 2000;        // How many steps to spend accelerating/decelerating
+const uint16_t START_DELAY = 600;     // Slowest speed (microseconds)
+const uint16_t TARGET_DELAY = 100;     // Your original speed (microseconds)
+
+
 
 
 bool lastTriggerState = HIGH;
@@ -47,6 +54,7 @@ void saveConfig() {
   preferences.putUInt("step2", stepper2_steps); // Save output port
   preferences.putUInt("step3", stepper3_steps); // Save output port
   preferences.putUInt("step4", stepper4_steps); // Save output port
+  preferences.putUInt("accel", RAMP_STEPS);     // Save acceleration/deceleration steps
   preferences.end();
 }
 
@@ -56,6 +64,7 @@ void getConfig() {
   stepper2_steps = preferences.getUInt("step2", 10000); // Load output port
   stepper3_steps = preferences.getUInt("step3", 10000); // Load output port
   stepper4_steps = preferences.getUInt("step4", 10000); // Load output port
+  RAMP_STEPS     = preferences.getUInt("accel", 2000); // Load acceleration/deceleration steps
   preferences.end();
 
   SerialBT.println("✅ Configuration Loaded:");
@@ -63,57 +72,104 @@ void getConfig() {
   SerialBT.println("Stepper 2 Steps: " + String(stepper2_steps));
   SerialBT.println("Stepper 3 Steps: " + String(stepper3_steps));
   SerialBT.println("Stepper 4 Steps: " + String(stepper4_steps));
+  SerialBT.println("Acceleration Steps: " + String(RAMP_STEPS));
 }
 
 void loadConfig() {
   preferences.begin("CUBE", true);
-  preferences.getUInt("step1", stepper1_steps); // Load input port
-  preferences.getUInt("step2", stepper2_steps); // Load output port
-  preferences.getUInt("step3", stepper3_steps); // Load output port
-  preferences.getUInt("step4", stepper4_steps); // Load output port
+  stepper1_steps = preferences.getUInt("step1", 10000); // Load input port
+  stepper2_steps = preferences.getUInt("step2", 10000); // Load output port
+  stepper3_steps = preferences.getUInt("step3", 10000); // Load output port
+  stepper4_steps = preferences.getUInt("step4", 10000); // Load output port
+  RAMP_STEPS     = preferences.getUInt("accel", 2000); // Load acceleration/deceleration steps
   preferences.end();
 }
 
-void launchSequence(){
-  if (DEBUG){ Serial.println("Launch sequence initiated."); }
-  // LAUNCH STEPPER ONE
-  for (uint32_t i = 0; i < stepper1_steps; i++){
-    digitalWrite(MOTOR_1_DIR, HIGH); // Set direction away from home
-    digitalWrite(MOTOR_1_PUL, HIGH);
-    delayMicroseconds(100); // Pulse width
-    digitalWrite(MOTOR_1_PUL, LOW);
-    delayMicroseconds(100); // Time between pulses
+// void launchSequence(){
+//   if (DEBUG){ Serial.println("Launch sequence initiated."); }
+//   // LAUNCH STEPPER ONE
+//   for (uint32_t i = 0; i < stepper1_steps; i++){
+//     digitalWrite(MOTOR_1_DIR, HIGH); // Set direction away from home
+//     digitalWrite(MOTOR_1_PUL, HIGH);
+//     delayMicroseconds(100); // Pulse width
+//     digitalWrite(MOTOR_1_PUL, LOW);
+//     delayMicroseconds(100); // Time between pulses
+//     }
+//   if (DEBUG){ Serial.println("Stepper 1 launched."); }
+//   // LAUNCH STEPPER TWO
+//   for (uint32_t i = 0; i < stepper2_steps; i++){
+//     digitalWrite(MOTOR_2_DIR, HIGH); // Set direction away from home
+//     digitalWrite(MOTOR_2_PUL, HIGH);
+//     delayMicroseconds(100); // Pulse width
+//     digitalWrite(MOTOR_2_PUL, LOW);
+//     delayMicroseconds(100); // Time between pulses
+//   }
+//   if (DEBUG){ Serial.println("Stepper 2 launched."); }
+//   // LAUNCH STEPPER THREE
+//   for (uint32_t i = 0; i < stepper3_steps; i++){
+//     digitalWrite(MOTOR_3_DIR, HIGH); // Set direction away from home
+//     digitalWrite(MOTOR_3_PUL, HIGH);
+//     delayMicroseconds(100); // Pulse width
+//     digitalWrite(MOTOR_3_PUL, LOW);
+//     delayMicroseconds(100); // Time between pulses
+//   }
+//   if (DEBUG){ Serial.println("Stepper 3 launched."); }
+//   // LAUNCH STEPPER FOUR
+//   for (uint32_t i = 0; i < stepper4_steps; i++){
+//     digitalWrite(MOTOR_4_DIR, HIGH); // Set direction away from home
+//     digitalWrite(MOTOR_4_PUL, HIGH);
+//     delayMicroseconds(100); // Pulse width
+//     digitalWrite(MOTOR_4_PUL, LOW);
+//     delayMicroseconds(100); // Time between pulses
+//   }
+//   if (DEBUG){ Serial.println("Stepper 4 launched."); }
+// }
+// Configuration for the ramp
+
+void moveStepperWithRamp(uint8_t pulsePin, uint8_t dirPin, uint32_t totalSteps, bool direction) {
+  digitalWrite(dirPin, direction);
+
+  for (uint32_t i = 0; i < totalSteps; i++) {
+    uint32_t currentDelay = TARGET_DELAY;
+
+    // Acceleration Phase
+    if (i < RAMP_STEPS && i < totalSteps / 2) {
+      currentDelay = map(i, 0, RAMP_STEPS, START_DELAY, TARGET_DELAY);
+    } 
+    // Deceleration Phase
+    else if (i > totalSteps - RAMP_STEPS && i > totalSteps / 2) {
+      currentDelay = map(i, totalSteps - RAMP_STEPS, totalSteps, TARGET_DELAY, START_DELAY);
     }
-  if (DEBUG){ Serial.println("Stepper 1 launched."); }
-  // LAUNCH STEPPER TWO
-  for (uint32_t i = 0; i < stepper2_steps; i++){
-    digitalWrite(MOTOR_2_DIR, HIGH); // Set direction away from home
-    digitalWrite(MOTOR_2_PUL, HIGH);
-    delayMicroseconds(100); // Pulse width
-    digitalWrite(MOTOR_2_PUL, LOW);
-    delayMicroseconds(100); // Time between pulses
+
+    // Pulse
+    digitalWrite(pulsePin, HIGH);
+    delayMicroseconds(currentDelay);
+    digitalWrite(pulsePin, LOW);
+    delayMicroseconds(currentDelay);
   }
-  if (DEBUG){ Serial.println("Stepper 2 launched."); }
-  // LAUNCH STEPPER THREE
-  for (uint32_t i = 0; i < stepper3_steps; i++){
-    digitalWrite(MOTOR_3_DIR, HIGH); // Set direction away from home
-    digitalWrite(MOTOR_3_PUL, HIGH);
-    delayMicroseconds(100); // Pulse width
-    digitalWrite(MOTOR_3_PUL, LOW);
-    delayMicroseconds(100); // Time between pulses
-  }
-  if (DEBUG){ Serial.println("Stepper 3 launched."); }
-  // LAUNCH STEPPER FOUR
-  for (uint32_t i = 0; i < stepper4_steps; i++){
-    digitalWrite(MOTOR_4_DIR, HIGH); // Set direction away from home
-    digitalWrite(MOTOR_4_PUL, HIGH);
-    delayMicroseconds(100); // Pulse width
-    digitalWrite(MOTOR_4_PUL, LOW);
-    delayMicroseconds(100); // Time between pulses
-  }
-  if (DEBUG){ Serial.println("Stepper 4 launched."); }
 }
 
+void launchSequence() {
+  if (DEBUG) Serial.println("Launch sequence initiated.");
+
+  // LAUNCH STEPPER ONE
+  moveStepperWithRamp(MOTOR_1_PUL, MOTOR_1_DIR, stepper1_steps, HIGH);
+  if (DEBUG) Serial.println("Stepper 1 launched.");
+
+  // LAUNCH STEPPER TWO
+  moveStepperWithRamp(MOTOR_2_PUL, MOTOR_2_DIR, stepper2_steps, HIGH);
+  if (DEBUG) Serial.println("Stepper 2 launched.");
+
+  // LAUNCH STEPPER THREE
+  moveStepperWithRamp(MOTOR_3_PUL, MOTOR_3_DIR, stepper3_steps, HIGH);
+  if (DEBUG) Serial.println("Stepper 3 launched.");
+
+  // LAUNCH STEPPER FOUR
+  moveStepperWithRamp(MOTOR_4_PUL, MOTOR_4_DIR, stepper4_steps, HIGH);
+  if (DEBUG) Serial.println("Stepper 4 launched.");
+
+  if (DEBUG) Serial.println("Launch sequence completed.");
+}
 
 void readInputs(){
   if (!launchSuccess && (digitalRead(TRIGGER) == LOW) && (lastTriggerState == HIGH) && ((millis() - lastMillis) > 500)){
@@ -172,37 +228,16 @@ void homingSequence(){
 }
 
 void resetLaunch(){
-  launchSuccess = false;
-  if (DEBUG){ Serial.println("Launch reset."); }
-  for (int i = stepper1_steps; i > 0; i--){
-    digitalWrite(MOTOR_1_DIR, LOW); // Set direction towards home
-    digitalWrite(MOTOR_1_PUL, HIGH);
-    delayMicroseconds(100); // Pulse width
-    digitalWrite(MOTOR_1_PUL, LOW);
-    delayMicroseconds(100); // Time between pulses
-    }
-  for (int i = stepper2_steps; i > 0; i--){
-    digitalWrite(MOTOR_2_DIR, LOW); // Set direction towards home
-    digitalWrite(MOTOR_2_PUL, HIGH);
-    delayMicroseconds(100); // Pulse width
-    digitalWrite(MOTOR_2_PUL, LOW);
-    delayMicroseconds(100); // Time between pulses
-  }
-  for (int i = stepper3_steps; i > 0; i--){
-    digitalWrite(MOTOR_3_DIR, LOW); // Set direction towards home
-    digitalWrite(MOTOR_3_PUL, HIGH);
-    delayMicroseconds(100); // Pulse width
-    digitalWrite(MOTOR_3_PUL, LOW);
-    delayMicroseconds(100); // Time between pulses
-  }
-  for (int i = stepper4_steps; i > 0; i--){
-    digitalWrite(MOTOR_4_DIR, LOW); // Set direction towards home
-    digitalWrite(MOTOR_4_PUL, HIGH);
-    delayMicroseconds(100); // Pulse width
-    digitalWrite(MOTOR_4_PUL, LOW);
-    delayMicroseconds(100); // Time between pulses
-  }
-  if (DEBUG){ Serial.println("Steppers reset to home."); }
+  if (DEBUG){ Serial.println("RESETTING"); }
+  moveStepperWithRamp(MOTOR_1_PUL, MOTOR_1_DIR, stepper1_steps, LOW);
+  if (DEBUG){ Serial.println("Stepper 1 reset to home."); }
+  moveStepperWithRamp(MOTOR_2_PUL, MOTOR_2_DIR, stepper2_steps, LOW);
+  if (DEBUG){ Serial.println("Stepper 2 reset to home."); }
+  moveStepperWithRamp(MOTOR_3_PUL, MOTOR_3_DIR, stepper3_steps, LOW);
+  if (DEBUG){ Serial.println("Stepper 3 reset to home."); }
+  moveStepperWithRamp(MOTOR_4_PUL, MOTOR_4_DIR, stepper4_steps, LOW);
+
+  if (DEBUG){ Serial.println("RESET COMPLETE"); }
 }
 
 void processData(String data){
@@ -222,8 +257,27 @@ void processData(String data){
     stepper4_steps = data.substring(10, data.length()).toInt(); SerialBT.println("✅ Stepper 4 steps set to " + String(stepper4_steps));
     saveConfig();
   } 
+  else if (data.startsWith("SET_ACCEL")){
+    RAMP_STEPS = data.substring(10, data.length()).toInt(); 
+    SerialBT.println("✅ Acceleration/Deceleration steps set to " + String(RAMP_STEPS));
+    saveConfig();
+  }
   else if (data == "GET_CONFIG"){
     getConfig();
+  }
+  else if (data == "L"){
+    if (!launchSuccess && reset){ 
+      launchSequence();
+      launchSuccess = true;
+      reset = false;
+    }
+  }
+  else if (data == "R"){
+    if (!reset && launchSuccess){ 
+      resetLaunch();
+      launchSuccess = false;
+      reset = true;
+    }
   }
   else { SerialBT.println("❌ Unknown command: " + data);}
 }
@@ -240,9 +294,18 @@ void readSerial(){
   if (Serial.available()){
     char command = Serial.read();
     if (command == 'r'){
-      resetLaunch();    
+      if (!reset && launchSuccess){ 
+        resetLaunch();
+        launchSuccess = false;
+        reset = true;
+      }
+       
     } else if (command == 'l'){
-      launchSequence();
+      if (!launchSuccess && reset){ 
+        launchSequence();
+        launchSuccess = true;
+        reset = false;
+      }
     }
   }
 }
