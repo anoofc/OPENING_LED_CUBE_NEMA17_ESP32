@@ -2,7 +2,7 @@
 
 #define BT_NAME        "OPENING_Cube"
 
-#define TRIGGER       13
+#define TRIGGER       34
 
 #define LIMIT_1       32
 #define LIMIT_2       33
@@ -44,7 +44,7 @@ const uint16_t TARGET_DELAY = 100;     // Your original speed (microseconds)
 
 
 
-bool lastTriggerState = HIGH;
+bool lastTriggerState = LOW;
 uint32_t lastMillis = 0;
 
 
@@ -172,17 +172,33 @@ void launchSequence() {
 }
 
 void readInputs(){
-  if (!launchSuccess && (digitalRead(TRIGGER) == LOW) && (lastTriggerState == HIGH) && ((millis() - lastMillis) > 500)){
+  if ((digitalRead(TRIGGER)==HIGH) && ((millis() - lastMillis) > 500)){
     // Trigger pressed
+    if (DEBUG){ Serial.println("Trigger pressed."); }
+
     lastMillis = millis();
-    lastTriggerState = LOW;
-    launchSequence();
-    launchSuccess = true;
+    
+    if (!launchSuccess && reset){
+      launchSequence();
+      launchSuccess = true;
+      reset = false;
+    }
     if (DEBUG){ Serial.println("Launch successful."); }
   }
   else if (digitalRead(TRIGGER) == HIGH){
-    lastTriggerState = HIGH;
+    lastTriggerState = LOW;
   }
+  // if (!launchSuccess && (digitalRead(TRIGGER) == LOW) && (lastTriggerState == HIGH) && ((millis() - lastMillis) > 500)){
+  //   // Trigger pressed
+  //   lastMillis = millis();
+  //   lastTriggerState = LOW;
+  //   launchSequence();
+  //   launchSuccess = true;
+  //   if (DEBUG){ Serial.println("Launch successful."); }
+  // }
+  // else if (digitalRead(TRIGGER) == HIGH){
+  //   lastTriggerState = HIGH;
+  // }
 }
 
 
@@ -192,9 +208,9 @@ void homingSequence(){
     // Move motor 1 towards home
     digitalWrite(MOTOR_1_DIR, LOW); // Set direction towards home
     digitalWrite(MOTOR_1_PUL, HIGH);
-    delayMicroseconds(100); // Pulse width
+    delayMicroseconds(200); // Pulse width
     digitalWrite(MOTOR_1_PUL, LOW);
-    delayMicroseconds(100); // Time between pulses 
+    delayMicroseconds(200); // Time between pulses 
   } 
   if (DEBUG){ Serial.println("Motor 1 homed."); }
 
@@ -202,27 +218,27 @@ void homingSequence(){
     // Move motor 2 towards home
     digitalWrite(MOTOR_2_DIR, LOW); // Set direction towards home
     digitalWrite(MOTOR_2_PUL, HIGH);
-    delayMicroseconds(100); // Pulse width
+    delayMicroseconds(200); // Pulse width
     digitalWrite(MOTOR_2_PUL, LOW);
-    delayMicroseconds(100); // Time between pulses 
+    delayMicroseconds(200); // Time between pulses 
   }
   if (DEBUG){ Serial.println("Motor 2 homed."); }
 
   while(digitalRead(LIMIT_3) == HIGH){
     digitalWrite(MOTOR_3_DIR, LOW); // Set direction towards home
     digitalWrite(MOTOR_3_PUL, HIGH);
-    delayMicroseconds(100); // Pulse width
+    delayMicroseconds(200); // Pulse width
     digitalWrite(MOTOR_3_PUL, LOW);
-    delayMicroseconds(100); // Time between pulses
+    delayMicroseconds(200); // Time between pulses
   }
   if (DEBUG){ Serial.println("Motor 3 homed."); }
 
   while(digitalRead(LIMIT_4) == HIGH){
     digitalWrite(MOTOR_4_DIR, LOW); // Set direction towards home
     digitalWrite(MOTOR_4_PUL, HIGH);
-    delayMicroseconds(100); // Pulse width
+    delayMicroseconds(200); // Pulse width
     digitalWrite(MOTOR_4_PUL, LOW);
-    delayMicroseconds(100); // Time between pulses
+    delayMicroseconds(200); // Time between pulses
   }
   if (DEBUG){ Serial.println("Motor 4 homed."); }
 }
@@ -352,14 +368,14 @@ void setup(){
   
   initGPIO();   // Initialize GPIO pins
   
-  homingSequence(); // Perform homing sequence
+  // homingSequence(); // Perform homing sequence
   delay(500);
   if (DEBUG){ Serial.println("Homing sequence completed."); }
 }
 
 void loop(){
-  // readInputs();
+  readInputs();
   readSerial();
   readBTSerial();
-  // inputCheck();  // DEBUG: Check input states
+  //  inputCheck();  // DEBUG: Check input states
 }
