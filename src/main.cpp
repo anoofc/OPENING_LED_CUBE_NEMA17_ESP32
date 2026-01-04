@@ -1,8 +1,8 @@
 #define DEBUG         1
 
-#define BT_NAME  "OPENING_Cube"
+#define BT_NAME        "OPENING_Cube"
 
-#define TRIGGER       4
+#define TRIGGER       13
 
 #define LIMIT_1       32
 #define LIMIT_2       33
@@ -12,14 +12,14 @@
 #define MOTOR_1_DIR   27
 #define MOTOR_1_PUL   14
 
-#define MOTOR_2_DIR   13
-#define MOTOR_2_PUL   23
+#define MOTOR_2_DIR   23
+#define MOTOR_2_PUL   22
 
-#define MOTOR_3_DIR   22
-#define MOTOR_3_PUL   21
+#define MOTOR_3_DIR   21
+#define MOTOR_3_PUL   19
 
-#define MOTOR_4_DIR   19
-#define MOTOR_4_PUL   18
+#define MOTOR_4_DIR   18
+#define MOTOR_4_PUL   4
 
 #include <Arduino.h>
 #include <Preferences.h>
@@ -80,43 +80,43 @@ void launchSequence(){
   for (uint32_t i = 0; i < stepper1_steps; i++){
     digitalWrite(MOTOR_1_DIR, HIGH); // Set direction away from home
     digitalWrite(MOTOR_1_PUL, HIGH);
-    delayMicroseconds(1000); // Pulse width
+    delayMicroseconds(100); // Pulse width
     digitalWrite(MOTOR_1_PUL, LOW);
-    delayMicroseconds(1000); // Time between pulses
+    delayMicroseconds(100); // Time between pulses
     }
   if (DEBUG){ Serial.println("Stepper 1 launched."); }
   // LAUNCH STEPPER TWO
   for (uint32_t i = 0; i < stepper2_steps; i++){
     digitalWrite(MOTOR_2_DIR, HIGH); // Set direction away from home
     digitalWrite(MOTOR_2_PUL, HIGH);
-    delayMicroseconds(1000); // Pulse width
+    delayMicroseconds(100); // Pulse width
     digitalWrite(MOTOR_2_PUL, LOW);
-    delayMicroseconds(1000); // Time between pulses
+    delayMicroseconds(100); // Time between pulses
   }
   if (DEBUG){ Serial.println("Stepper 2 launched."); }
   // LAUNCH STEPPER THREE
   for (uint32_t i = 0; i < stepper3_steps; i++){
     digitalWrite(MOTOR_3_DIR, HIGH); // Set direction away from home
     digitalWrite(MOTOR_3_PUL, HIGH);
-    delayMicroseconds(1000); // Pulse width
+    delayMicroseconds(100); // Pulse width
     digitalWrite(MOTOR_3_PUL, LOW);
-    delayMicroseconds(1000); // Time between pulses
+    delayMicroseconds(100); // Time between pulses
   }
   if (DEBUG){ Serial.println("Stepper 3 launched."); }
   // LAUNCH STEPPER FOUR
   for (uint32_t i = 0; i < stepper4_steps; i++){
     digitalWrite(MOTOR_4_DIR, HIGH); // Set direction away from home
     digitalWrite(MOTOR_4_PUL, HIGH);
-    delayMicroseconds(1000); // Pulse width
+    delayMicroseconds(100); // Pulse width
     digitalWrite(MOTOR_4_PUL, LOW);
-    delayMicroseconds(1000); // Time between pulses
+    delayMicroseconds(100); // Time between pulses
   }
   if (DEBUG){ Serial.println("Stepper 4 launched."); }
 }
 
 
 void readInputs(){
-  if (!launchSuccess && (digitalRead(TRIGGER) == LOW) && (lastTriggerState == HIGH) && ((millis() - lastMillis) > 500) && !homing){
+  if (!launchSuccess && (digitalRead(TRIGGER) == LOW) && (lastTriggerState == HIGH) && ((millis() - lastMillis) > 500)){
     // Trigger pressed
     lastMillis = millis();
     lastTriggerState = LOW;
@@ -136,9 +136,9 @@ void homingSequence(){
     // Move motor 1 towards home
     digitalWrite(MOTOR_1_DIR, LOW); // Set direction towards home
     digitalWrite(MOTOR_1_PUL, HIGH);
-    delayMicroseconds(1000); // Pulse width
+    delayMicroseconds(100); // Pulse width
     digitalWrite(MOTOR_1_PUL, LOW);
-    delayMicroseconds(1000); // Time between pulses 
+    delayMicroseconds(100); // Time between pulses 
   } 
   if (DEBUG){ Serial.println("Motor 1 homed."); }
 
@@ -146,27 +146,27 @@ void homingSequence(){
     // Move motor 2 towards home
     digitalWrite(MOTOR_2_DIR, LOW); // Set direction towards home
     digitalWrite(MOTOR_2_PUL, HIGH);
-    delayMicroseconds(1000); // Pulse width
+    delayMicroseconds(100); // Pulse width
     digitalWrite(MOTOR_2_PUL, LOW);
-    delayMicroseconds(1000); // Time between pulses 
+    delayMicroseconds(100); // Time between pulses 
   }
   if (DEBUG){ Serial.println("Motor 2 homed."); }
 
   while(digitalRead(LIMIT_3) == HIGH){
     digitalWrite(MOTOR_3_DIR, LOW); // Set direction towards home
     digitalWrite(MOTOR_3_PUL, HIGH);
-    delayMicroseconds(1000); // Pulse width
+    delayMicroseconds(100); // Pulse width
     digitalWrite(MOTOR_3_PUL, LOW);
-    delayMicroseconds(1000); // Time between pulses
+    delayMicroseconds(100); // Time between pulses
   }
   if (DEBUG){ Serial.println("Motor 3 homed."); }
 
   while(digitalRead(LIMIT_4) == HIGH){
     digitalWrite(MOTOR_4_DIR, LOW); // Set direction towards home
     digitalWrite(MOTOR_4_PUL, HIGH);
-    delayMicroseconds(1000); // Pulse width
+    delayMicroseconds(100); // Pulse width
     digitalWrite(MOTOR_4_PUL, LOW);
-    delayMicroseconds(1000); // Time between pulses
+    delayMicroseconds(100); // Time between pulses
   }
   if (DEBUG){ Serial.println("Motor 4 homed."); }
 }
@@ -177,30 +177,30 @@ void resetLaunch(){
   for (int i = stepper1_steps; i > 0; i--){
     digitalWrite(MOTOR_1_DIR, LOW); // Set direction towards home
     digitalWrite(MOTOR_1_PUL, HIGH);
-    delayMicroseconds(1000); // Pulse width
+    delayMicroseconds(100); // Pulse width
     digitalWrite(MOTOR_1_PUL, LOW);
-    delayMicroseconds(1000); // Time between pulses
+    delayMicroseconds(100); // Time between pulses
     }
   for (int i = stepper2_steps; i > 0; i--){
     digitalWrite(MOTOR_2_DIR, LOW); // Set direction towards home
     digitalWrite(MOTOR_2_PUL, HIGH);
-    delayMicroseconds(1000); // Pulse width
+    delayMicroseconds(100); // Pulse width
     digitalWrite(MOTOR_2_PUL, LOW);
-    delayMicroseconds(1000); // Time between pulses
+    delayMicroseconds(100); // Time between pulses
   }
   for (int i = stepper3_steps; i > 0; i--){
     digitalWrite(MOTOR_3_DIR, LOW); // Set direction towards home
     digitalWrite(MOTOR_3_PUL, HIGH);
-    delayMicroseconds(1000); // Pulse width
+    delayMicroseconds(100); // Pulse width
     digitalWrite(MOTOR_3_PUL, LOW);
-    delayMicroseconds(1000); // Time between pulses
+    delayMicroseconds(100); // Time between pulses
   }
   for (int i = stepper4_steps; i > 0; i--){
     digitalWrite(MOTOR_4_DIR, LOW); // Set direction towards home
     digitalWrite(MOTOR_4_PUL, HIGH);
-    delayMicroseconds(1000); // Pulse width
+    delayMicroseconds(100); // Pulse width
     digitalWrite(MOTOR_4_PUL, LOW);
-    delayMicroseconds(1000); // Time between pulses
+    delayMicroseconds(100); // Time between pulses
   }
   if (DEBUG){ Serial.println("Steppers reset to home."); }
 }
@@ -241,6 +241,8 @@ void readSerial(){
     char command = Serial.read();
     if (command == 'r'){
       resetLaunch();    
+    } else if (command == 'l'){
+      launchSequence();
     }
   }
 }
@@ -287,13 +289,13 @@ void setup(){
   
   initGPIO();   // Initialize GPIO pins
   
-  // homingSequence(); // Perform homing sequence
+  homingSequence(); // Perform homing sequence
   delay(500);
   if (DEBUG){ Serial.println("Homing sequence completed."); }
 }
 
 void loop(){
-  readInputs();
+  // readInputs();
   readSerial();
   readBTSerial();
   // inputCheck();  // DEBUG: Check input states
