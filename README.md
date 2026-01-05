@@ -10,6 +10,7 @@ This project controls four NEMA17 stepper motors via an ESP32 microcontroller. T
 - Configurable step counts per motor
 - Acceleration/deceleration ramping for smooth motion
 - Homing and reset sequences
+- Optional auto-reset timer
 - Persistent configuration storage using NVS (Non-Volatile Storage)
 - Limit switch support for home position detection
 
@@ -20,6 +21,7 @@ This project controls four NEMA17 stepper motors via an ESP32 microcontroller. T
 | Component | Pin | Purpose |
 |-----------|-----|---------|
 | TRIGGER | 34 | Launch trigger input |
+| RESET | 35 | Reset trigger input |
 | LIMIT_1 | 32 | Motor 1 home limit switch |
 | LIMIT_2 | 33 | Motor 2 home limit switch |
 | LIMIT_3 | 25 | Motor 3 home limit switch |
@@ -56,6 +58,7 @@ Send via Bluetooth Serial (BT_NAME: "OPENING_Cube"):
 | `SET_STEP3 <steps>` | Set motor 3 step count |
 | `SET_STEP4 <steps>` | Set motor 4 step count |
 | `SET_ACCEL <steps>` | Set acceleration ramp steps |
+| `SET_TIME <seconds>` | Set auto-reset timer (seconds) |
 | `GET_CONFIG` | Retrieve and display current config |
 | `L` | Launch sequence |
 | `R` | Reset to home position |
@@ -90,13 +93,14 @@ Parses and executes Bluetooth commands.
 | `reset` | Indicates motors are at home position |
 | `stepper[1-4]_steps` | Configurable steps per motor |
 | `RAMP_STEPS` | Acceleration profile duration |
+| `resetTime` | Auto-reset timer duration (seconds) |
 
 ## Configuration Storage
 
 Settings are persisted to ESP32 flash memory using Preferences:
 - Namespace: "CUBE"
-- Keys: `step1`, `step2`, `step3`, `step4`, `accel`
-- Defaults: 10000 steps per motor, 2000 ramp steps
+- Keys: `step1`, `step2`, `step3`, `step4`, `accel`, `time`
+- Defaults: 10000 steps per motor, 2000 ramp steps, 0 seconds for auto-reset
 
 ## Debug Mode
 
