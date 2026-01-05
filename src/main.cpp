@@ -3,6 +3,7 @@
 #define BT_NAME        "OPENING_Cube"
 
 #define TRIGGER       34
+#define RESET         35
 
 #define LIMIT_1       32
 #define LIMIT_2       33
@@ -171,6 +172,20 @@ void launchSequence() {
   if (DEBUG) Serial.println("Launch sequence completed.");
 }
 
+void resetLaunch(){
+  if (DEBUG){ Serial.println("RESETTING"); }
+  moveStepperWithRamp(MOTOR_1_PUL, MOTOR_1_DIR, stepper1_steps, LOW);
+  if (DEBUG){ Serial.println("Stepper 1 reset to home."); }
+  moveStepperWithRamp(MOTOR_2_PUL, MOTOR_2_DIR, stepper2_steps, LOW);
+  if (DEBUG){ Serial.println("Stepper 2 reset to home."); }
+  moveStepperWithRamp(MOTOR_3_PUL, MOTOR_3_DIR, stepper3_steps, LOW);
+  if (DEBUG){ Serial.println("Stepper 3 reset to home."); }
+  moveStepperWithRamp(MOTOR_4_PUL, MOTOR_4_DIR, stepper4_steps, LOW);
+
+  if (DEBUG){ Serial.println("RESET COMPLETE"); }
+}
+
+
 void readInputs(){
   if ((digitalRead(TRIGGER)==HIGH) && ((millis() - lastMillis) > 500)){
     // Trigger pressed
@@ -187,6 +202,20 @@ void readInputs(){
   }
   else if (digitalRead(TRIGGER) == HIGH){
     lastTriggerState = LOW;
+  }
+
+  if ((digitalRead(RESET)==HIGH) && ((millis() - lastMillis) > 500)){
+    // Reset pressed
+    if (DEBUG){ Serial.println("Reset pressed."); }
+
+    lastMillis = millis();
+    
+    if (!reset && launchSuccess){
+      resetLaunch();
+      launchSuccess = false;
+      reset = true;
+    }
+    if (DEBUG){ Serial.println("Reset successful."); }
   }
   // if (!launchSuccess && (digitalRead(TRIGGER) == LOW) && (lastTriggerState == HIGH) && ((millis() - lastMillis) > 500)){
   //   // Trigger pressed
@@ -243,18 +272,7 @@ void homingSequence(){
   if (DEBUG){ Serial.println("Motor 4 homed."); }
 }
 
-void resetLaunch(){
-  if (DEBUG){ Serial.println("RESETTING"); }
-  moveStepperWithRamp(MOTOR_1_PUL, MOTOR_1_DIR, stepper1_steps, LOW);
-  if (DEBUG){ Serial.println("Stepper 1 reset to home."); }
-  moveStepperWithRamp(MOTOR_2_PUL, MOTOR_2_DIR, stepper2_steps, LOW);
-  if (DEBUG){ Serial.println("Stepper 2 reset to home."); }
-  moveStepperWithRamp(MOTOR_3_PUL, MOTOR_3_DIR, stepper3_steps, LOW);
-  if (DEBUG){ Serial.println("Stepper 3 reset to home."); }
-  moveStepperWithRamp(MOTOR_4_PUL, MOTOR_4_DIR, stepper4_steps, LOW);
 
-  if (DEBUG){ Serial.println("RESET COMPLETE"); }
-}
 
 void processData(String data){
   if (data.startsWith("SET_STEP1")){
@@ -328,6 +346,7 @@ void readSerial(){
 
 void inputCheck(){
   Serial.println("TRIG: " + String(digitalRead(TRIGGER)) + 
+                 " RESET: " + String(digitalRead(RESET)) +
                  " L1: " + String(digitalRead(LIMIT_1)) +
                  " L2: " + String(digitalRead(LIMIT_2)) +
                  " L3: " + String(digitalRead(LIMIT_3)) +
@@ -337,6 +356,7 @@ void inputCheck(){
 
 void initGPIO(){
   pinMode(TRIGGER, INPUT_PULLUP);
+  pinMode(RESET, INPUT_PULLUP);
 
   pinMode(LIMIT_1, INPUT_PULLUP);
   pinMode(LIMIT_2, INPUT_PULLUP);
