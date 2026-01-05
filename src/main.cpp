@@ -37,11 +37,12 @@ uint32_t stepper1_steps = 10000;
 uint32_t stepper2_steps = 10000;
 uint32_t stepper3_steps = 10000;
 uint32_t stepper4_steps = 10000;
-
+uint32_t timerMillis = 0;
 uint32_t RAMP_STEPS     = 2000;        // How many steps to spend accelerating/decelerating
 const uint16_t START_DELAY = 600;     // Slowest speed (microseconds)
 const uint16_t TARGET_DELAY = 100;     // Your original speed (microseconds)
 
+uint16_t resetTime = 0;
 
 
 
@@ -56,6 +57,7 @@ void saveConfig() {
   preferences.putUInt("step3", stepper3_steps); // Save output port
   preferences.putUInt("step4", stepper4_steps); // Save output port
   preferences.putUInt("accel", RAMP_STEPS);     // Save acceleration/deceleration steps
+  preferences.putUInt("time", resetTime);     // Save reset time
   preferences.end();
 }
 
@@ -66,6 +68,7 @@ void getConfig() {
   stepper3_steps = preferences.getUInt("step3", 10000); // Load output port
   stepper4_steps = preferences.getUInt("step4", 10000); // Load output port
   RAMP_STEPS     = preferences.getUInt("accel", 2000); // Load acceleration/deceleration steps
+  resetTime      = preferences.getUInt("time", 0); // Load reset time
   preferences.end();
 
   SerialBT.println("✅ Configuration Loaded:");
@@ -74,6 +77,7 @@ void getConfig() {
   SerialBT.println("Stepper 3 Steps: " + String(stepper3_steps));
   SerialBT.println("Stepper 4 Steps: " + String(stepper4_steps));
   SerialBT.println("Acceleration Steps: " + String(RAMP_STEPS));
+  SerialBT.println("Reset Time (S): " + String(resetTime));
 }
 
 void loadConfig() {
@@ -83,6 +87,7 @@ void loadConfig() {
   stepper3_steps = preferences.getUInt("step3", 10000); // Load output port
   stepper4_steps = preferences.getUInt("step4", 10000); // Load output port
   RAMP_STEPS     = preferences.getUInt("accel", 2000); // Load acceleration/deceleration steps
+  resetTime      = preferences.getUInt("time", 0); // Load reset time
   preferences.end();
 }
 
@@ -197,11 +202,9 @@ void readInputs(){
       launchSequence();
       launchSuccess = true;
       reset = false;
+      timerMillis = millis();
     }
     if (DEBUG){ Serial.println("Launch successful."); }
-  }
-  else if (digitalRead(TRIGGER) == HIGH){
-    lastTriggerState = LOW;
   }
 
   if ((digitalRead(RESET)==HIGH) && ((millis() - lastMillis) > 500)){
@@ -272,6 +275,14 @@ void homingSequence(){
   if (DEBUG){ Serial.println("Motor 4 homed."); }
 }
 
+void checkTimer(){
+  if (millis() - timerMillis >= resetTime * 1000 && resetTime > 0){
+    resetLaunch();
+    launchSuccess = false;
+    reset = true;
+  }
+}
+
 
 
 void processData(String data){
@@ -295,6 +306,10 @@ void processData(String data){
     RAMP_STEPS = data.substring(10, data.length()).toInt(); 
     SerialBT.println("✅ Acceleration/Deceleration steps set to " + String(RAMP_STEPS));
     saveConfig();
+  }
+  else if (data.startsWith("SET_TIME")){
+    uint16_t time = data.substring(9, data.length()).toInt(); 
+    
   }
   else if (data == "GET_CONFIG"){
     getConfig();
@@ -394,8 +409,10 @@ void setup(){
 }
 
 void loop(){
-  readInputs();
-  readSerial();
-  readBTSerial();
+  // checkTimer();       // Check for reset timer
+  readInputs();       // Read physical inputs
+  readSerial();       // Read Serial inputs
+  readBTSerial();     // Read Bluetooth Serial inputs
+
   //  inputCheck();  // DEBUG: Check input states
 }
