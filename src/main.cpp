@@ -5,6 +5,9 @@
 #define TRIGGER       34
 #define RESET         35
 
+#define SENSOR        39
+#define THRESHOLD     2000
+
 #define LIMIT_1       32
 #define LIMIT_2       33
 #define LIMIT_3       25
@@ -21,6 +24,9 @@
 
 #define MOTOR_4_DIR   18
 #define MOTOR_4_PUL   4
+
+#define TRIGGER_COMMAND       'T'
+#define TRIGGER_END_COMMAND   'E'
 
 #include <Arduino.h>
 #include <Preferences.h>
@@ -199,10 +205,12 @@ void readInputs(){
     lastMillis = millis();
     
     if (!launchSuccess && reset){
+      Serial2.println(TRIGGER_COMMAND);
       launchSequence();
       launchSuccess = true;
       reset = false;
       timerMillis = millis();
+      Serial2.println(TRIGGER_END_COMMAND);
     }
     if (DEBUG){ Serial.println("Launch successful."); }
   }
@@ -316,9 +324,12 @@ void processData(String data){
   }
   else if (data == "L"){
     if (!launchSuccess && reset){ 
+      Serial2.println(TRIGGER_COMMAND);
       launchSequence();
       launchSuccess = true;
+      timerMillis = millis();
       reset = false;
+      Serial2.println(TRIGGER_END_COMMAND);
     }
   }
   else if (data == "R"){
@@ -351,11 +362,28 @@ void readSerial(){
        
     } else if (command == 'l'){
       if (!launchSuccess && reset){ 
+        Serial2.println(TRIGGER_COMMAND);
         launchSequence();
+        timerMillis = millis();
         launchSuccess = true;
         reset = false;
+        Serial2.println(TRIGGER_END_COMMAND);
       }
     }
+  }
+}
+
+
+void readSensor(){
+  uint16_t sensorValue = analogRead(SENSOR);
+  if (sensorValue > THRESHOLD && !launchSuccess && reset){
+    if (DEBUG){ Serial.println("Sensor triggered launch. Value: " + String(sensorValue)); }
+    Serial2.println(TRIGGER_COMMAND);
+    launchSequence();
+    timerMillis = millis();
+    launchSuccess = true;
+    reset = false;
+    Serial2.println(TRIGGER_END_COMMAND);
   }
 }
 
@@ -410,9 +438,10 @@ void setup(){
 
 void loop(){
   // checkTimer();       // Check for reset timer
+  readSensor();       // Read sensor input
   readInputs();       // Read physical inputs
   readSerial();       // Read Serial inputs
   readBTSerial();     // Read Bluetooth Serial inputs
 
-  //  inputCheck();  // DEBUG: Check input states
+  //  inputCheck();      // DEBUG: Check input states
 }
