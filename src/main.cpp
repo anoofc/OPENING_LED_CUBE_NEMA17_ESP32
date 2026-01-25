@@ -1,11 +1,11 @@
 #define DEBUG         1
 
-#define BT_NAME        "OPENING_Cube"
+#define BT_NAME       "OPENING_Cube"
 
 #define TRIGGER       34
 #define RESET         35
 
-#define SENSOR        39
+#define SENSOR        13
 #define THRESHOLD     2000
 
 #define LIMIT_1       32
@@ -16,14 +16,16 @@
 #define MOTOR_1_DIR   27
 #define MOTOR_1_PUL   14
 
-#define MOTOR_2_DIR   23
-#define MOTOR_2_PUL   22
+#define MOTOR_2_DIR   22
+#define MOTOR_2_PUL   23
 
-#define MOTOR_3_DIR   21
-#define MOTOR_3_PUL   19
+#define MOTOR_3_DIR   18
+#define MOTOR_3_PUL   4
 
-#define MOTOR_4_DIR   18
-#define MOTOR_4_PUL   4
+#define MOTOR_4_DIR   21
+#define MOTOR_4_PUL   19
+
+
 
 #define TRIGGER_COMMAND       'T'
 #define TRIGGER_END_COMMAND   'E'
@@ -39,17 +41,17 @@ bool homing = false;
 bool launchSuccess = false;
 bool reset = true;
 
+
 uint32_t stepper1_steps = 10000;
 uint32_t stepper2_steps = 10000;
 uint32_t stepper3_steps = 10000;
 uint32_t stepper4_steps = 10000;
-uint32_t timerMillis = 0;
+uint32_t timerMillis    = 0;
 uint32_t RAMP_STEPS     = 2000;        // How many steps to spend accelerating/decelerating
-const uint16_t START_DELAY = 600;     // Slowest speed (microseconds)
-const uint16_t TARGET_DELAY = 100;     // Your original speed (microseconds)
+const uint16_t START_DELAY = 600;      // Slowest speed (microseconds)
+const uint16_t TARGET_DELAY = 50;     // Your original speed (microseconds)
 
-uint16_t resetTime = 0;
-
+uint16_t resetTime = 60;
 
 
 bool lastTriggerState = LOW;
@@ -74,7 +76,7 @@ void getConfig() {
   stepper3_steps = preferences.getUInt("step3", 10000); // Load output port
   stepper4_steps = preferences.getUInt("step4", 10000); // Load output port
   RAMP_STEPS     = preferences.getUInt("accel", 2000); // Load acceleration/deceleration steps
-  resetTime      = preferences.getUInt("time", 0); // Load reset time
+  resetTime      = preferences.getUInt("time",  60); // Load reset time
   preferences.end();
 
   SerialBT.println("✅ Configuration Loaded:");
@@ -93,7 +95,7 @@ void loadConfig() {
   stepper3_steps = preferences.getUInt("step3", 10000); // Load output port
   stepper4_steps = preferences.getUInt("step4", 10000); // Load output port
   RAMP_STEPS     = preferences.getUInt("accel", 2000); // Load acceleration/deceleration steps
-  resetTime      = preferences.getUInt("time", 0); // Load reset time
+  resetTime      = preferences.getUInt("time", 60); // Load reset time
   preferences.end();
 }
 
@@ -339,8 +341,18 @@ void processData(String data){
       reset = true;
     }
   }
+  else if (data == "A1"){ moveStepperWithRamp(MOTOR_1_PUL, MOTOR_1_DIR, stepper1_steps, HIGH); }
+  else if (data == "B1"){ moveStepperWithRamp(MOTOR_2_PUL, MOTOR_2_DIR, stepper2_steps, HIGH); }
+  else if (data == "C1"){ moveStepperWithRamp(MOTOR_3_PUL, MOTOR_3_DIR, stepper3_steps, HIGH); }
+  else if (data == "D1"){ moveStepperWithRamp(MOTOR_4_PUL, MOTOR_4_DIR, stepper4_steps, HIGH); }
+
+  else if (data == "A0"){ moveStepperWithRamp(MOTOR_1_PUL, MOTOR_1_DIR, stepper1_steps, LOW);  }
+  else if (data == "B0"){ moveStepperWithRamp(MOTOR_2_PUL, MOTOR_2_DIR, stepper2_steps, LOW);  }
+  else if (data == "C0"){ moveStepperWithRamp(MOTOR_3_PUL, MOTOR_3_DIR, stepper3_steps, LOW);  }
+  else if (data == "D0"){ moveStepperWithRamp(MOTOR_4_PUL, MOTOR_4_DIR, stepper4_steps, LOW);  }
+
   else { SerialBT.println("❌ Unknown command: " + data);}
-}
+}  
 
 void readBTSerial(){
   if (SerialBT.available()){
@@ -375,15 +387,22 @@ void readSerial(){
 
 
 void readSensor(){
-  uint16_t sensorValue = analogRead(SENSOR);
-  if (sensorValue > THRESHOLD && !launchSuccess && reset){
-    if (DEBUG){ Serial.println("Sensor triggered launch. Value: " + String(sensorValue)); }
-    Serial2.println(TRIGGER_COMMAND);
-    launchSequence();
-    timerMillis = millis();
-    launchSuccess = true;
-    reset = false;
-    Serial2.println(TRIGGER_END_COMMAND);
+  static uint32_t sensorTriggerMillis = 0;
+  if ((digitalRead(SENSOR)==LOW) && ((millis() - sensorTriggerMillis) > 500)){
+    // Trigger pressed
+    if (DEBUG){ Serial.println("Sensor pressed."); }
+
+    sensorTriggerMillis = millis();
+    
+    if (!launchSuccess && reset){
+      Serial2.println(TRIGGER_COMMAND);
+      launchSequence();
+      launchSuccess = true;
+      reset = false;
+      timerMillis = millis();
+      Serial2.println(TRIGGER_END_COMMAND);
+    }
+    if (DEBUG){ Serial.println("Launch successful with Sensor."); }
   }
 }
 
@@ -400,6 +419,7 @@ void inputCheck(){
 void initGPIO(){
   pinMode(TRIGGER, INPUT_PULLUP);
   pinMode(RESET, INPUT_PULLUP);
+  pinMode(SENSOR, INPUT_PULLUP);
 
   pinMode(LIMIT_1, INPUT_PULLUP);
   pinMode(LIMIT_2, INPUT_PULLUP);
@@ -431,13 +451,13 @@ void setup(){
   
   initGPIO();   // Initialize GPIO pins
   
-  // homingSequence(); // Perform homing sequence
+  homingSequence(); // Perform homing sequence
   delay(500);
   if (DEBUG){ Serial.println("Homing sequence completed."); }
 }
 
 void loop(){
-  // checkTimer();       // Check for reset timer
+  checkTimer();       // Check for reset timer
   readSensor();       // Read sensor input
   readInputs();       // Read physical inputs
   readSerial();       // Read Serial inputs
